@@ -1,0 +1,32 @@
+{
+  "name": "veridian-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lightweight-charts": "^4.2.0",
+    "lucide-react": "^0.424.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-grid-layout": "^1.4.4",
+    "react-resizable": "^3.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/react-grid-layout": "^1.3.4",
+    "@types/react-resizable": "^3.0.5",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.18",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.4.5",
+    "vite": "^5.1.0"
+  }
+}
