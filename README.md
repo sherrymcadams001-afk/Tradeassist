@@ -72,6 +72,12 @@ npm run dev
   `VERIDIAN_EXCHANGES=kraken,coinbase` (comma separated) to skip restricted venues
 - Update `TOP_20_PAIRS` in `backend/market_feed.py` to change tracked markets
 
+## API Quick Reference
+
+- `GET /api/health` — returns `status`, `mode` (live vs mock), the active `exchange`, and a preview of tracked symbols so the HUD can display runtime diagnostics.
+- `GET /api/ohlcv?symbol=BTC/USDT&limit=720` — primary REST endpoint for historical candles; alternatively, `GET /api/ohlcv/BTC/USDT?limit=720` may be used via the path parameter.
+- `WS /ws/prices` — push channel for `tick` packets plus a one-time `env` packet with host diagnostics. The frontend automatically reconnects with jittered retries.
+
 ## Testing & Next Steps
 
 - Backend includes a sample pytest suite (`backend/tests/test_signal_aggregator.py`); run with `pytest` once dependencies are installed
