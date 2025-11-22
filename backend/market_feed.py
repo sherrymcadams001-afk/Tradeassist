@@ -18,7 +18,10 @@ from ccxt.base.errors import ExchangeError, ExchangeNotAvailable, NetworkError
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import router as auth_router
+from app.api.v1.api_keys import router as api_key_router
 from app.api.v1.routes import router as control_router
+from app.core.config import settings
 
 logger = logging.getLogger("veridian.market_feed")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -346,12 +349,16 @@ def backfill_history(symbol: str, days: int = 30) -> int:
 
 
 app = FastAPI(title="VERIDIAN VORTEX Data Engine")
+allowed_origins = [origin.strip() for origin in settings.frontend_origin.split(",") if origin.strip()] or ["http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
+app.include_router(auth_router)
+app.include_router(api_key_router)
 app.include_router(control_router)
 
 

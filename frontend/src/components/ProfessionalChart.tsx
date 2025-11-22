@@ -1,20 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ColorType, CrosshairMode, IChartApi, ISeriesApi, LineData, LineStyle, UTCTimestamp, createChart } from "lightweight-charts";
 
-type Candle = {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-};
+import { useCandleFeedContext } from "../contexts/CandleFeedContext";
+
+type NormalizedCandle = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
 
 type ProfessionalChartProps = {
-  candles: Candle[];
   height?: number;
 };
 
-export function ProfessionalChart({ candles, height = 420 }: ProfessionalChartProps) {
+export function ProfessionalChart({ height = 420 }: ProfessionalChartProps) {
+  const {
+    feed: { candles, status, mode },
+    config,
+  } = useCandleFeedContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -95,8 +94,8 @@ export function ProfessionalChart({ candles, height = 420 }: ProfessionalChartPr
         fontSize: 24,
         horzAlign: "right",
         vertAlign: "bottom",
-        color: "rgba(148,163,184,0.15)",
-        text: "MIDAS TOUCH · BOT VISION",
+        color: "rgba(148,163,184,0.12)",
+        text: "ORION",
       },
     });
 
@@ -121,28 +120,32 @@ export function ProfessionalChart({ candles, height = 420 }: ProfessionalChartPr
     };
   }, [height]);
 
+  const normalizedCandles: NormalizedCandle[] = useMemo(
+    () =>
+      candles.map((candle) => ({
+        time: Math.floor(candle.openTime / 1000) as UTCTimestamp,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      })),
+    [candles],
+  );
+
   useEffect(() => {
-    if (!candles.length || !candleSeriesRef.current || !ema20Ref.current || !ema50Ref.current || !visionEntryRef.current || !visionExitRef.current) {
+    if (!normalizedCandles.length || !candleSeriesRef.current || !ema20Ref.current || !ema50Ref.current || !visionEntryRef.current || !visionExitRef.current) {
       return;
     }
 
-    const formatted = candles.map((candle) => ({
-      time: candle.time as UTCTimestamp,
-      open: candle.open,
-      high: candle.high,
-      low: candle.low,
-      close: candle.close,
-    }));
-
-    candleSeriesRef.current.setData(formatted);
-    ema20Ref.current.setData(calculateEMA(20, formatted));
-    ema50Ref.current.setData(calculateEMA(50, formatted));
-    const botVisionPaths = calculateBotVisionPaths(formatted);
+    candleSeriesRef.current.setData(normalizedCandles);
+    ema20Ref.current.setData(calculateEMA(20, normalizedCandles));
+    ema50Ref.current.setData(calculateEMA(50, normalizedCandles));
+    const botVisionPaths = calculateBotVisionPaths(normalizedCandles);
     visionEntryRef.current.setData(botVisionPaths.entryPath);
     visionExitRef.current.setData(botVisionPaths.exitPath);
 
-    if (formatted.length) {
-      const last = formatted[formatted.length - 1];
+    if (normalizedCandles.length) {
+      const last = normalizedCandles[normalizedCandles.length - 1];
       if (priceLineRef.current) {
         candleSeriesRef.current.removePriceLine(priceLineRef.current);
         priceLineRef.current = null;
@@ -157,13 +160,39 @@ export function ProfessionalChart({ candles, height = 420 }: ProfessionalChartPr
         lineVisible: true,
       });
     }
-  }, [candles]);
+  }, [normalizedCandles]);
+
+  const latestClose = normalizedCandles[normalizedCandles.length - 1]?.close;
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full rounded-xl border border-slate-800 bg-gradient-to-b from-slate-900 via-black to-slate-950 shadow-[0_0_60px_rgba(15,23,42,0.65)]"
-    />
+    <div className="relative w-full">
+      <div
+        ref={containerRef}
+        className="w-full rounded-xl border border-slate-800 bg-gradient-to-b from-slate-900 via-black to-slate-950 shadow-[0_0_60px_rgba(15,23,42,0.65)]"
+      />
+      {normalizedCandles.length === 0 ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs uppercase tracking-[0.4em] text-slate-600">
+          Awaiting market data...
+        </div>
+      ) : null}
+      <div className="pointer-events-none absolute left-4 top-4 flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-500">
+        <span
+          className={`h-2 w-2 rounded-full ${
+            status === "live" && mode === "live"
+              ? "bg-emerald-400"
+              : status === "live"
+                ? "bg-amber-400"
+                : status === "error"
+                  ? "bg-rose-500"
+                  : "bg-slate-600"
+          }`}
+        />
+        {mode === "live" && status === "live" ? "Live" : mode === "live" && status !== "live" ? "Connecting" : "Simulated"}
+        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] uppercase tracking-[0.25em] text-slate-400">
+          {config.symbol} · {config.timeframe} {latestClose ? `· ${latestClose.toFixed(2)}` : ""}
+        </span>
+      </div>
+    </div>
   );
 }
 

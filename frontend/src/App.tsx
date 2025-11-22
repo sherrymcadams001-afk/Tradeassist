@@ -1,69 +1,87 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Dashboard } from "./components/Dashboard";
+import { ApiKeyManager } from "./components/settings/ApiKeyManager";
 import { OnboardingPanel } from "./components/onboarding/OnboardingPanel";
+import { VerificationSequence } from "./components/VerificationSequence";
+import { useAuth } from "./contexts/AuthContext";
 import { useBotProfile } from "./hooks/useBotProfile";
 
-const DEMO_USER_ID = "pilot-001";
+type AppPhase = "verification" | "onboarding" | "dashboard";
 
 export default function App() {
-  const { bot, tiers, tierMap, profile, loading, error, saving, saveProfile } = useBotProfile(DEMO_USER_ID);
+  const { user, loading: authLoading, error: authError, login } = useAuth();
+  const authReady = Boolean(user);
+  const { bot, tiers, tierMap, profile, loading, error, saving, saveProfile } = useBotProfile(user?.userId ?? null, {
+    enabled: authReady,
+  });
+  const [phase, setPhase] = useState<AppPhase>("verification");
   const [handshakeComplete, setHandshakeComplete] = useState(false);
-  const [cockpitVisible, setCockpitVisible] = useState(false);
 
-  useEffect(() => {
-    if (handshakeComplete) {
-      setCockpitVisible(true);
-    }
-  }, [handshakeComplete]);
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#01030a] text-slate-100">
+        <p className="text-sm uppercase tracking-[0.4em] text-slate-500">Securing session…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#01030a] text-slate-100">
+        <div className="rounded-3xl border border-slate-800/70 bg-slate-900/40 px-8 py-10 text-center shadow-[0_0_60px_rgba(6,182,212,0.15)]">
+          <p className="text-xs uppercase tracking-[0.4em] text-cyan-300">Orion Suite</p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-white">Authenticate to continue</h1>
+          <p className="mt-2 text-sm text-slate-400">Zero trust session required before accessing the control surface.</p>
+          {authError ? <p className="mt-4 text-xs text-rose-400">{authError}</p> : null}
+          <button
+            type="button"
+            onClick={() => {
+              void login();
+            }}
+            className="mt-6 inline-flex items-center rounded-full border border-cyan-400/40 bg-cyan-400/10 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-200 transition hover:bg-cyan-400/20"
+          >
+            Initiate Secure Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "verification") {
+    return <VerificationSequence onComplete={() => setPhase("onboarding")} />;
+  }
+
+  if (phase === "onboarding") {
+    return (
+      <div className="min-h-screen bg-[#01030a] text-slate-100">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8">
+          <OnboardingPanel
+            bot={bot}
+            tiers={tiers}
+            tierMap={tierMap}
+            profile={profile}
+            loading={loading}
+            error={error}
+            saving={saving}
+            onSave={saveProfile}
+            onHandshakeStateChange={(complete) => {
+              setHandshakeComplete(complete);
+              if (complete) {
+                setPhase("dashboard");
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-black text-slate-100">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8">
-        <section className="rounded-3xl border border-slate-900 bg-[#05060f] p-6 shadow-[0_20px_90px_rgba(3,8,23,0.75)]">
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Midas Touch · Module Briefing</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white">Link the client-side bot to the parent exchange.</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            This workspace treats VERIDIAN as a remote API surface. Once the security handshake finalizes, the Midas Touch cockpit unlocks and streams live telemetry.
-          </p>
-        </section>
-
-        <OnboardingPanel
-          bot={bot}
-          tiers={tiers}
-          tierMap={tierMap}
-          profile={profile}
-          loading={loading}
-          error={error}
-          saving={saving}
-          onSave={saveProfile}
-          onHandshakeStateChange={setHandshakeComplete}
-        />
-
-        <section className="rounded-3xl border border-slate-900 bg-[#04050b] p-6 shadow-[0_30px_90px_rgba(3,8,23,0.65)]">
-          <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Midas Touch Cockpit</p>
-              <p className="mt-1 text-sm text-slate-400">
-                Handshake status: {handshakeComplete ? "Secured" : "Negotiating"}. Live feeds unlock automatically once the handshake locks.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="ghost-button px-4 py-2 text-sm font-medium"
-              aria-pressed={cockpitVisible}
-              onClick={() => setCockpitVisible((prev) => !prev)}
-              disabled={!handshakeComplete && !cockpitVisible}
-            >
-              {cockpitVisible ? "Collapse Cockpit" : handshakeComplete ? "Launch Cockpit" : "Handshake Pending"}
-            </button>
-          </header>
-          {cockpitVisible ? (
-            <div className="mt-6">
-              <Dashboard bot={bot} profile={profile} tier={profile ? tierMap[profile.tier] : undefined} />
-            </div>
-          ) : null}
-        </section>
+    <div className="min-h-screen bg-[#01030a] text-slate-100">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-8">
+        <Dashboard bot={bot} profile={profile} tier={profile ? tierMap[profile.tier] : undefined} />
+        <ApiKeyManager />
       </div>
     </div>
   );

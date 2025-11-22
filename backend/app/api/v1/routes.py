@@ -15,9 +15,10 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.config import settings
+from app.core.security import SessionUser, get_current_user
 
 router = APIRouter(prefix="/v1", tags=["veridian"])
 
@@ -186,26 +187,52 @@ async def list_tiers() -> list[dict[str, Any]]:
     return [asdict(tier) for tier in TIERS.values()]
 
 
+def _assert_profile_access(requestor: SessionUser, target_user: str) -> None:
+    if requestor.user_id == target_user:
+        return
+    if "admin" in requestor.roles:
+        return
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
+@router.get("/users/me/profile")
+async def get_my_profile(user: SessionUser = Depends(get_current_user)) -> dict[str, Any]:
+    profile = _get_or_create_profile(user.user_id)
+    return profile.to_dict()
+
+
 @router.get("/users/{user_id}/profile")
-async def get_user_profile(user_id: str) -> dict[str, Any]:
+async def get_user_profile(user_id: str, user: SessionUser = Depends(get_current_user)) -> dict[str, Any]:
     """Fetch the user's tier and preferences (auto-provisioned if missing)."""
 
+    _assert_profile_access(user, user_id)
     profile = _get_or_create_profile(user_id)
     return profile.to_dict()
 
 
+@router.post("/users/me/profile")
+async def update_my_profile(payload: dict[str, Any], user: SessionUser = Depends(get_current_user)) -> dict[str, Any]:
+    return await update_user_profile(user.user_id, payload, user)
+
+
 @router.post("/users/{user_id}/profile")
-async def update_user_profile(user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+async def update_user_profile(
+    user_id: str,
+    payload: dict[str, Any],
+    user: SessionUser = Depends(get_current_user),
+) -> dict[str, Any]:
     """Update tier (if permitted) and/or preferences for a user.
 
     NOTE: Access control is not enforced here; upstream services are expected to
     ensure only privileged operators can elevate a tier.
     """
-
+    _assert_profile_access(user, user_id)
     profile = _get_or_create_profile(user_id)
     tier_id = payload.get("tier", profile.tier)
     if tier_id not in TIERS:
         raise HTTPException(status_code=400, detail="Tier not recognized")
+    if tier_id != profile.tier and "admin" not in user.roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tier changes require admin role")
 
     pref_payload = payload.get("preferences", {})
     preferences = _validate_preferences(tier_id, pref_payload)

@@ -20,25 +20,27 @@ export const RealTimeTicker = memo(function RealTimeTicker({ ticks }: RealTimeTi
 
   return (
     <section style={widgetStyle}>
-      <header style={headerStyle}>Signal Stream</header>
-      <div style={tableHeadStyle}>
-        <span>Symbol</span>
-        <span>Bid</span>
-        <span>Ask</span>
-        <span>Last</span>
-        <span>Latency</span>
-      </div>
-      <div style={bodyStyle}>
-        {rows.map((row) => (
-          <article key={row.symbol} style={rowStyle}>
-            <span>{row.symbol}</span>
-            <span style={{ color: palette.accent.buy }}>{renderValue(row.bid ?? row.price)}</span>
-            <span style={{ color: palette.accent.sell }}>{renderValue(row.ask ?? row.price)}</span>
-            <span style={{ color: palette.accent.idle }}>{renderValue(row.last ?? row.price)}</span>
-            <span>{renderLatency(row.ts)}</span>
-          </article>
-        ))}
-        {!rows.length && <div style={emptyStyle}>Awaiting market data…</div>}
+      <header style={headerStyle}>Bot Market Feed</header>
+      <div style={tableContainerStyle}>
+        <div style={tableHeadStyle}>
+          <span>Symbol</span>
+          <span>Bid</span>
+          <span>Ask</span>
+          <span>Last</span>
+          <span>Latency</span>
+        </div>
+        <div style={bodyStyle}>
+          {rows.map((row) => (
+            <article key={row.symbol} style={rowStyle}>
+              <span>{row.symbol}</span>
+              <span style={{ color: palette.accent.buy }}>{renderValue(row.bid ?? row.price)}</span>
+              <span style={{ color: palette.accent.sell }}>{renderValue(row.ask ?? row.price)}</span>
+              <span style={{ color: palette.accent.idle }}>{renderValue(row.last ?? row.price)}</span>
+              <span>{renderLatency(row.ts)}</span>
+            </article>
+          ))}
+          {!rows.length && <div style={emptyStyle}>Awaiting market data…</div>}
+        </div>
       </div>
     </section>
   );
@@ -62,11 +64,18 @@ const headerStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+const tableContainerStyle: React.CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  minWidth: "480px",
+};
+
 const tableHeadStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(5, 1fr)",
+  gridTemplateColumns: "1.2fr 1fr 1fr 1fr 0.8fr",
   padding: "8px 16px",
-  fontSize: 12,
+  fontSize: 11,
   color: palette.text.muted,
   background: "rgba(255,255,255,0.02)",
 };
@@ -78,10 +87,10 @@ const bodyStyle: React.CSSProperties = {
 
 const rowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(5, 1fr)",
+  gridTemplateColumns: "1.2fr 1fr 1fr 1fr 0.8fr",
   padding: "10px 16px",
   borderBottom: `1px dashed ${palette.grid.line}`,
-  fontSize: 13,
+  fontSize: 12,
 };
 
 const emptyStyle: React.CSSProperties = {

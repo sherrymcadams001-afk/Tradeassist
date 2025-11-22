@@ -17,15 +17,21 @@ type SocketMessage =
 type UseMarketStreamParams = {
   url: string;
   symbols?: string[];
+  enabled?: boolean;
 };
 
-export function useMarketStream({ url, symbols }: UseMarketStreamParams) {
+export function useMarketStream({ url, symbols, enabled = true }: UseMarketStreamParams) {
   const socketRef = useRef<WebSocket | null>(null);
   const [ticks, setTicks] = useState<Record<string, TickPayload>>({});
   const [connected, setConnected] = useState(false);
   const symbolKey = symbols?.join(",") ?? "";
 
   useEffect(() => {
+    if (!enabled) {
+      setConnected(false);
+      setTicks({});
+      return;
+    }
     let retryHandle: number | null = null;
     let shouldReconnect = true;
 
@@ -78,7 +84,7 @@ export function useMarketStream({ url, symbols }: UseMarketStreamParams) {
       socketRef.current?.close(4000, "component_unmount");
       socketRef.current = null;
     };
-  }, [url, symbolKey]);
+  }, [url, symbolKey, enabled]);
 
   return { ticks, connected };
 }

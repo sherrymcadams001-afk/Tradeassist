@@ -18,29 +18,31 @@ type ActiveOrdersProps = {
 export function ActiveOrders({ orders }: ActiveOrdersProps) {
   return (
     <section style={widgetStyle}>
-      <header style={headerStyle}>Active Orders</header>
-      <div style={tableHeadStyle}>
-        <span>Venue</span>
-        <span>Symbol</span>
-        <span>Side</span>
-        <span>Qty</span>
-        <span>Price</span>
-        <span>Status</span>
-      </div>
-      <div style={bodyStyle}>
-        {orders.map((order) => (
-          <article key={order.id} style={rowStyle}>
-            <span>{order.venue}</span>
-            <span>{order.symbol}</span>
-            <span style={{ color: order.side === "buy" ? palette.accent.buy : palette.accent.sell }}>
-              {order.side.toUpperCase()}
-            </span>
-            <span>{order.quantity.toLocaleString(undefined, { minimumFractionDigits: 4 })}</span>
-            <span>{order.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-            <span>{order.status}</span>
-          </article>
-        ))}
-        {!orders.length && <div style={emptyStyle}>No working orders.</div>}
+      <header style={headerStyle}>Bot Live Orders</header>
+      <div style={tableContainerStyle}>
+        <div style={tableHeadStyle}>
+          <span>Venue</span>
+          <span>Symbol</span>
+          <span>Side</span>
+          <span>Qty</span>
+          <span>Price</span>
+          <span>Status</span>
+        </div>
+        <div style={bodyStyle}>
+          {orders.map((order) => (
+            <article key={order.id} style={rowStyle}>
+              <span>{order.venue}</span>
+              <span>{order.symbol}</span>
+              <span style={{ color: order.side === "buy" ? palette.accent.buy : palette.accent.sell }}>
+                {order.side.toUpperCase()}
+              </span>
+              <span>{order.quantity.toLocaleString(undefined, { minimumFractionDigits: 4 })}</span>
+              <span>{order.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span>{order.status}</span>
+            </article>
+          ))}
+          {!orders.length && <div style={emptyStyle}>No working orders.</div>}
+        </div>
       </div>
     </section>
   );
@@ -64,11 +66,18 @@ const headerStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+const tableContainerStyle: React.CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  minWidth: "560px",
+};
+
 const tableHeadStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(6, 1fr)",
+  gridTemplateColumns: "0.8fr 1fr 0.7fr 1fr 1fr 0.8fr",
   padding: "8px 16px",
-  fontSize: 12,
+  fontSize: 11,
   color: palette.text.muted,
   background: "rgba(255,255,255,0.02)",
 };
@@ -80,10 +89,10 @@ const bodyStyle: React.CSSProperties = {
 
 const rowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(6, 1fr)",
+  gridTemplateColumns: "0.8fr 1fr 0.7fr 1fr 1fr 0.8fr",
   padding: "10px 16px",
   borderBottom: `1px dashed ${palette.grid.line}`,
-  fontSize: 13,
+  fontSize: 12,
 };
 
 const emptyStyle: React.CSSProperties = {

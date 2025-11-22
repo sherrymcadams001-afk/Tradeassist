@@ -9,7 +9,11 @@ type ProfilePayload = {
   preferences: Partial<UserPreferences>;
 };
 
-export function useBotProfile(userId: string) {
+type UseBotProfileOptions = {
+  enabled?: boolean;
+};
+
+export function useBotProfile(userId?: string | null, options?: UseBotProfileOptions) {
   const [bot, setBot] = useState<BotDescriptor | null>(null);
   const [tiers, setTiers] = useState<TierDefinition[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -17,14 +21,22 @@ export function useBotProfile(userId: string) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const canFetch = options?.enabled ?? true;
+  const resolvedUserId = userId ?? "me";
+  const profilePath = resolvedUserId === "me" ? "/v1/users/me/profile" : `/v1/users/${resolvedUserId}/profile`;
+
   const refresh = useCallback(async () => {
+    if (!canFetch) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const [botResp, tiersResp, profileResp] = await Promise.all([
-        fetch(`${API_BASE}/v1/bot`),
-        fetch(`${API_BASE}/v1/tiers`),
-        fetch(`${API_BASE}/v1/users/${userId}/profile`),
+        fetch(`${API_BASE}/v1/bot`, { credentials: "include" }),
+        fetch(`${API_BASE}/v1/tiers`, { credentials: "include" }),
+        fetch(`${API_BASE}${profilePath}`, { credentials: "include" }),
       ]);
 
       if (!botResp.ok || !tiersResp.ok || !profileResp.ok) {
@@ -42,19 +54,24 @@ export function useBotProfile(userId: string) {
       setProfile(profileJson);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
+      setProfile(null);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [canFetch, profilePath]);
 
   const saveProfile = useCallback(
     async (payload: ProfilePayload) => {
+      if (!canFetch) {
+        throw new Error("Authentication required");
+      }
       setSaving(true);
       setError(null);
       try {
-        const resp = await fetch(`${API_BASE}/v1/users/${userId}/profile`, {
+        const resp = await fetch(`${API_BASE}${profilePath}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify(payload),
         });
         if (!resp.ok) {
@@ -71,11 +88,11 @@ export function useBotProfile(userId: string) {
         setSaving(false);
       }
     },
-    [userId]
+    [canFetch, profilePath]
   );
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const tierMap = useMemo(() => Object.fromEntries(tiers.map((tier) => [tier.id, tier])), [tiers]);

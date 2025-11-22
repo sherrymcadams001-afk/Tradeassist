@@ -21,6 +21,7 @@ export type UserPreferences = {
   symbols_whitelist: string[];
   notification_level: "silent" | "summary" | "verbose";
   explanation_level: "concise" | "detailed";
+  timing_profile?: "calm" | "balanced" | "dynamic";
 };
 
 export type UserProfile = {
